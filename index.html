@@ -36,56 +36,56 @@
       let dropCount = 0;
       let isAnimating = false;
 
+      // SETUP: Hide the Pink liquid as soon as the model loads!
+      setup.addEventListener('model-loaded', () => {
+         const mesh = setup.getObject3D('mesh');
+         if (mesh) {
+             const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+             if (pinkLiquid) pinkLiquid.visible = false; 
+         }
+      });
+
+      // CLICK EVENT: The Simulation
       setup.addEventListener('click', () => {
-        // Prevent clicking again while a drop is currently falling
         if (isAnimating) return; 
 
-        // Grab the internal 3D meshes from your Blender file
         const mesh = setup.getObject3D('mesh');
         if (!mesh) return;
 
-        // CRITICAL: These names MUST match what you named them in Blender's outliner!
-        const drop = mesh.getObjectByName('Burette_Drop'); 
-        const liquid = mesh.getObjectByName('Liquid_Clear'); // or whatever you named the flask liquid
+        // GRABBING YOUR EXACT BLENDER NAMES
+        const drop = mesh.getObjectByName('Sphere.001'); 
+        const clearLiquid = mesh.getObjectByName('Liquid_Clear'); 
+        const pinkLiquid = mesh.getObjectByName('Liquid_Pink'); 
         
         dropCount++;
-        console.log("Drop count: " + dropCount);
+        console.log("Drops added: " + dropCount);
 
-        // --- ANIMATION LOGIC ---
+        // --- THE FALLING DROP ANIMATION ---
         if (drop) {
           isAnimating = true;
-          // Unhide the drop if you hid it in Blender
           drop.visible = true; 
           
           const startY = drop.position.y;
           let step = 0;
           
-          // Move the drop down slightly every 20 milliseconds
           const fallInterval = setInterval(() => {
-            drop.position.y -= 0.02; // Adjust this number if it falls too fast/slow
+            drop.position.y -= 0.02; // Speed of the drop
             step++;
             
-            // After 25 steps, reset the drop back to the top
             if (step > 25) { 
               clearInterval(fallInterval);
-              drop.position.y = startY; 
-              drop.visible = false; // Hide it again
+              drop.position.y = startY; // Reset to top
+              drop.visible = false;     // Hide drop
               isAnimating = false;
 
-              // --- 7-CLICK COLOR LOGIC ---
-              if (dropCount === 7 && liquid) {
-                // Change the liquid material to Pink (#FF1493)
-                liquid.material.color.set('#FF1493'); 
-                console.log("Titration Complete! Liquid is Pink.");
+              // --- THE 7-CLICK ENDPOINT ---
+              if (dropCount === 7) {
+                if (clearLiquid) clearLiquid.visible = false; // Hide clear
+                if (pinkLiquid) pinkLiquid.visible = true;    // Show pink
+                console.log("Titration Complete! Equivalence point reached.");
               }
             }
-          }, 20);
-        } else {
-            // Backup in case the drop isn't found, but we still want the 7th click to work
-            isAnimating = false;
-            if (dropCount === 7 && liquid) {
-                liquid.material.color.set('#FF1493');
-            }
+          }, 20); // 20ms per frame
         }
       });
     </script>
