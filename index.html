@@ -52,7 +52,6 @@
       <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="objects: .clickable"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        
         <a-entity drag-rotate>
             <a-gltf-model id="titration-setup" 
                           src="#lab-kit" 
@@ -64,11 +63,10 @@
                    class="clickable" 
                    scale="2 3 2" 
                    position="0 0.5 0" 
-                   color="red" 
+                   color="red"
                    material="opacity: 0.4; transparent: true">
             </a-box>
         </a-entity>
-
       </a-entity>
     </a-scene>
 
@@ -78,7 +76,7 @@
       let dropCount = 0;
       let isAnimating = false;
 
-      // STEP A: Hide the Pink Liquid and Drop the second the 3D model loads
+      // STEP A: Hide the Pink Liquid and Drop when the 3D model loads
       setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
@@ -89,9 +87,12 @@
          }
       });
 
-      // STEP B: The Click Event (Triggered by the invisible Hitbox)
+      // STEP B: The Click Event
       hitbox.addEventListener('click', () => {
-        if (isAnimating) return; // Prevent spam-clicking while drop falls
+        // --- PROOF OF LIFE POPUP ---
+        alert("TAP REGISTERED! Drop count is now: " + (dropCount + 1));
+
+        if (isAnimating) return; // Prevent spam-clicking
 
         const mesh = setup.getObject3D('mesh');
         if (!mesh) return;
@@ -111,16 +112,14 @@
           const startY = drop.position.y;
           let step = 0;
           
-          // Moves the drop downward 25 times rapidly
           const fallInterval = setInterval(() => {
             drop.position.y -= 0.03; // Speed of the fall
             step++;
             
-            // When drop reaches the flask
             if (step > 25) { 
               clearInterval(fallInterval);
-              drop.position.y = startY; // Reset drop position
-              drop.visible = false;     // Hide drop again
+              drop.position.y = startY; 
+              drop.visible = false;     
               isAnimating = false;
 
               // STEP D: THE 7-CLICK ENDPOINT COLOR CHANGE
