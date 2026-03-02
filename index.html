@@ -91,35 +91,46 @@
           setTimeout(() => { debugUI.style.display = 'none'; }, 2000);
       }
 
-setup.addEventListener('model-loaded', () => {
+      // STEP 1: FIX SHADERS WHEN MODEL LOADS
+      setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
              
              // --- THE WEBGL TRANSPARENCY FIX ---
              mesh.traverse((node) => {
-                 if (node.isMesh) {
+                 if (node.isMesh && node.material) {
                      // 1. Force Liquids and Drop to be 100% Solid & Draw First
                      if (node.name.includes('Liquid') || node.name.includes('Sphere')) {
                          node.material.transparent = false;
                          node.material.opacity = 1.0;
                          node.material.depthWrite = true;
                          node.material.renderOrder = 1;
+                         
+                         // Strip away Blender glass properties & recompile
+                         if (node.material.transmission !== undefined) {
+                             node.material.transmission = 0;
+                         }
+                         node.material.needsUpdate = true; 
                      }
                      // 2. Force Glass to let liquids show through & Draw Last
                      else if (node.material.transparent || node.material.opacity < 1.0) {
                          node.material.depthWrite = false;
                          node.material.renderOrder = 2;
+                         node.material.needsUpdate = true;
                      }
                  }
              });
              // -----------------------------------
 
+             // Hide the Pink Liquid initially
              const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
              if (pinkLiquid) pinkLiquid.visible = false; 
-             showDebug("Model Loaded & Fixed");
+             
+             showDebug("Model Loaded & Shaders Recompiled");
          }
       });
 
+      // STEP 2: FULL-SCREEN TAP DETECTOR
       window.addEventListener('click', () => {
         if (isAnimating) return; 
         
@@ -127,11 +138,13 @@ setup.addEventListener('model-loaded', () => {
         isAnimating = true;
         showDebug("TAP " + dropCount + " REGISTERED!");
 
+        // Fire Blender Animation
         setup.removeAttribute('animation-mixer');
         setTimeout(() => {
             setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
         }, 10);
 
+        // STEP 3: 7-CLICK LOGIC
         const onAnimationFinish = function() {
           setup.removeEventListener('animation-finished', onAnimationFinish);
           isAnimating = false; 
@@ -146,6 +159,7 @@ setup.addEventListener('model-loaded', () => {
                 if (pinkLiquid) pinkLiquid.visible = true;    
             }
             
+            // Success Popup
             const alertBox = document.createElement('div');
             alertBox.innerHTML = "Equivalence Point Reached!";
             alertBox.style.cssText = "position:absolute; top:20%; left:50%; transform:translateX(-50%); background:white; padding:15px; border-radius:10px; font-family:sans-serif; font-weight:bold; color:#FF1493; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.4); text-align: center;";
@@ -156,6 +170,7 @@ setup.addEventListener('model-loaded', () => {
 
         setup.addEventListener('animation-finished', onAnimationFinish);
         
+        // Anti-Freeze Failsafe (In case animation takes too long or glitches)
         setTimeout(() => {
             if(isAnimating) {
                 isAnimating = false;
