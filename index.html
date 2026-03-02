@@ -37,10 +37,21 @@
         }
       });
     </script>
+    
+    <style>
+      .mindar-ui-overlay { pointer-events: none; } /* Stops the AR UI from blocking finger taps */
+      #debug-ui {
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.8); color: lime; padding: 10px 20px; border-radius: 8px;
+        font-family: monospace; font-size: 16px; z-index: 9999; display: none; pointer-events: none;
+      }
+    </style>
   </head>
 
   <body style="margin: 0; overflow: hidden;">
     
+    <div id="debug-ui">System Ready</div>
+
     <a-scene mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
              color-space="sRGB" 
              renderer="colorManagement: true, physicallyCorrectLights" 
@@ -70,7 +81,7 @@
                    scale="2 3 2" 
                    position="0 0.5 0" 
                    color="red"
-                   material="opacity: 0.4; transparent: true">
+                   material="opacity: 0.3; transparent: true">
             </a-box>
 
         </a-entity>
@@ -80,57 +91,87 @@
     <script>
       const setup = document.querySelector('#titration-setup');
       const hitbox = document.querySelector('#interaction-hitbox');
+      const debugUI = document.querySelector('#debug-ui');
       let dropCount = 0;
       let isAnimating = false;
 
-      // STEP A: Hide the Pink Liquid the moment the 3D model loads
+      // Flash message function
+      function showDebug(msg) {
+          debugUI.style.display = 'block';
+          debugUI.innerText = msg;
+          setTimeout(() => { debugUI.style.display = 'none'; }, 2000);
+      }
+
+      // STEP A: Model Load & Name Verifier
       setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
              const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
-             if (pinkLiquid) pinkLiquid.visible = false; 
+             if (pinkLiquid) {
+                 pinkLiquid.visible = false; 
+             } else {
+                 alert("CRITICAL ERROR: 'Liquid_Pink' not found in Blender file! Check spelling.");
+             }
+             
+             const clearLiquid = mesh.getObjectByName('Liquid_Clear');
+             if (!clearLiquid) {
+                 alert("CRITICAL ERROR: 'Liquid_Clear' not found in Blender file! Check spelling.");
+             }
+             showDebug("Model Loaded & Verified");
          }
       });
 
-      // STEP B: The Click Event
+      // STEP B: The Bulletproof Click Event
       hitbox.addEventListener('click', () => {
-        if (isAnimating) return; // Prevent spam-clicking while the drop is falling
+        if (isAnimating) return; // Ignore fast double-taps
         
         dropCount++;
         isAnimating = true;
+        showDebug("TAP " + dropCount + " REGISTERED!");
 
-        // STEP C: Play the Blender Animation Exactly Once
-        // We remove the attribute first to "reset" it so it can play again on the next click
+        // Fire the Blender Animation
         setup.removeAttribute('animation-mixer');
         setTimeout(() => {
             setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
         }, 10);
 
-        // STEP D: Wait for the 20-frame Blender animation to finish
-        setup.addEventListener('animation-finished', function handler() {
-          setup.removeEventListener('animation-finished', handler); // Clean up the listener
-          isAnimating = false; // Unlock clicking for the next drop
+        // Function that runs when animation finishes
+        const onAnimationFinish = function() {
+          setup.removeEventListener('animation-finished', onAnimationFinish);
+          isAnimating = false; 
 
-          // STEP E: The 7-Click Color Swap Logic
+          // STEP C: 7-Click Color Swap
           if (dropCount === 7) {
             const mesh = setup.getObject3D('mesh');
-            if (!mesh) return;
-
-            const clearLiquid = mesh.getObjectByName('Liquid_Clear');
-            const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+            if (mesh) {
+                const clearLiquid = mesh.getObjectByName('Liquid_Clear');
+                const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+                
+                if (clearLiquid) clearLiquid.visible = false; 
+                if (pinkLiquid) pinkLiquid.visible = true;    
+            }
             
-            // The Instant Chemical Reaction
-            if (clearLiquid) clearLiquid.visible = false; 
-            if (pinkLiquid) pinkLiquid.visible = true;    
-            
-            // The Screen Popup
+            // Success Popup
             const alertBox = document.createElement('div');
             alertBox.innerHTML = "Equivalence Point Reached!";
-            alertBox.style.cssText = "position:absolute; top:15%; left:50%; transform:translateX(-50%); background:white; padding:15px; border-radius:10px; font-family:sans-serif; font-weight:bold; color:#FF1493; z-index:999; box-shadow: 0px 4px 6px rgba(0,0,0,0.3); text-align: center;";
+            alertBox.style.cssText = "position:absolute; top:20%; left:50%; transform:translateX(-50%); background:white; padding:15px; border-radius:10px; font-family:sans-serif; font-weight:bold; color:#FF1493; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.4); text-align: center;";
             document.body.appendChild(alertBox);
-            setTimeout(() => alertBox.remove(), 4000); // Disappears after 4 seconds
+            setTimeout(() => alertBox.remove(), 4000);
           }
-        });
+        };
+
+        // Listen for Blender to say "I'm done"
+        setup.addEventListener('animation-finished', onAnimationFinish);
+        
+        // FAILSAFE: If Blender animation is broken/missing, unlock system after 1.5 seconds anyway
+        setTimeout(() => {
+            if(isAnimating) {
+                isAnimating = false;
+                setup.removeEventListener('animation-finished', onAnimationFinish);
+                showDebug("Animation skipped/failed, but click counted.");
+            }
+        }, 1500); 
+
       });
     </script>
   </body>
