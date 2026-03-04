@@ -9,68 +9,91 @@
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <script>
-      AFRAME.registerComponent('touch-controls', {
+      AFRAME.registerComponent('sticky-ar', {
+        init: function () {
+          this.isUnlocked = false;
+          this.el.addEventListener('targetFound', () => {
+            if (!this.isUnlocked) {
+              this.isUnlocked = true;
+              const debugUI = document.querySelector('#debug-ui');
+              debugUI.style.display = 'block';
+              debugUI.innerText = "Model Unlocked! You can remove the paper.";
+              setTimeout(() => { debugUI.style.display = 'none'; }, 3000);
+            }
+          });
+        },
+        tick: function () {
+          // If it has been scanned once, never let MindAR hide it again
+          if (this.isUnlocked) {
+            this.el.object3D.visible = true;
+          }
+        }
+      });
+    </script>
+
+    <script>
+      AFRAME.registerComponent('custom-controls', {
         schema: { 
           rotationSpeed: { default: 1 },
-          minScale: { default: 0.1 },
-          maxScale: { default: 5 }
+          minScale: { default: 0.2 },
+          maxScale: { default: 4 }
         },
         init: function () {
-          this.ifMouseDown = false;
+          this.isDragging = false;
           this.x_cord = 0;
           this.y_cord = 0;
-          this.initialDistance = 0;
-          this.initialScale = this.el.object3D.scale.clone();
+          this.initialDist = 0;
+          this.startScale = this.el.object3D.scale.clone();
 
-          document.addEventListener('touchstart', this.OnTouchStart.bind(this));
-          document.addEventListener('touchend', this.OnTouchEnd.bind(this));
-          document.addEventListener('touchmove', this.OnTouchMove.bind(this));
+          document.addEventListener('touchstart', this.onTouchStart.bind(this));
+          document.addEventListener('touchend', this.onTouchEnd.bind(this));
+          document.addEventListener('touchmove', this.onTouchMove.bind(this));
         },
-        OnTouchStart: function (event) { 
-          if (event.touches.length === 1) {
-            this.ifMouseDown = true; 
-            this.x_cord = event.touches[0].clientX; 
-            this.y_cord = event.touches[0].clientY; 
-          } else if (event.touches.length === 2) {
-            this.ifMouseDown = false; // Stop rotating so we can zoom safely
-            this.initialDistance = this.getDistance(event.touches);
-            this.initialScale = this.el.object3D.scale.clone();
+        onTouchStart: function (e) {
+          if (e.touches.length === 1) {
+            this.isDragging = true;
+            this.x_cord = e.touches[0].clientX;
+            this.y_cord = e.touches[0].clientY;
+          } else if (e.touches.length === 2) {
+            this.isDragging = false;
+            this.initialDist = this.getDist(e.touches);
+            this.startScale = this.el.object3D.scale.clone();
           }
         },
-        OnTouchEnd: function () { 
-          this.ifMouseDown = false; 
+        onTouchEnd: function () { 
+          this.isDragging = false; 
         },
-        OnTouchMove: function (event) {
-          // ROTATE
-          if (this.ifMouseDown && event.touches.length === 1) {
-            let temp_x = event.touches[0].clientX - this.x_cord;
-            let temp_y = event.touches[0].clientY - this.y_cord;
+        onTouchMove: function (e) {
+          // Rotate (1 Finger)
+          if (this.isDragging && e.touches.length === 1) {
+            let temp_x = e.touches[0].clientX - this.x_cord;
+            let temp_y = e.touches[0].clientY - this.y_cord;
             this.el.object3D.rotation.y += temp_x * this.data.rotationSpeed / 100;
             this.el.object3D.rotation.x += temp_y * this.data.rotationSpeed / 100;
-            this.x_cord = event.touches[0].clientX;
-            this.y_cord = event.touches[0].clientY;
+            this.x_cord = e.touches[0].clientX;
+            this.y_cord = e.touches[0].clientY;
           } 
-          // ZOOM (Scale)
-          else if (event.touches.length === 2) {
-            let currentDistance = this.getDistance(event.touches);
-            let scaleFactor = currentDistance / this.initialDistance;
+          // Zoom (2 Fingers)
+          else if (e.touches.length === 2) {
+            if (this.initialDist === 0) return;
+            let currentDist = this.getDist(e.touches);
+            let factor = currentDist / this.initialDist;
             
-            let newScaleX = this.initialScale.x * scaleFactor;
-            let newScaleY = this.initialScale.y * scaleFactor;
-            let newScaleZ = this.initialScale.z * scaleFactor;
-
-            // Prevent it from getting too massive or too microscopic
-            newScaleX = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleX));
-            newScaleY = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleY));
-            newScaleZ = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleZ));
-
-            this.el.object3D.scale.set(newScaleX, newScaleY, newScaleZ);
+            let nx = this.startScale.x * factor;
+            let ny = this.startScale.y * factor;
+            let nz = this.startScale.z * factor;
+            
+            nx = Math.max(this.data.minScale, Math.min(this.data.maxScale, nx));
+            ny = Math.max(this.data.minScale, Math.min(this.data.maxScale, ny));
+            nz = Math.max(this.data.minScale, Math.min(this.data.maxScale, nz));
+            
+            this.el.object3D.scale.set(nx, ny, nz);
           }
         },
-        getDistance: function(touches) {
+        getDist: function(touches) {
           let dx = touches[0].clientX - touches[1].clientX;
           let dy = touches[0].clientY - touches[1].clientY;
-          return Math.sqrt(dx * dx + dy * dy);
+          return Math.sqrt(dx*dx + dy*dy);
         }
       });
     </script>
@@ -80,7 +103,7 @@
       #debug-ui {
         position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
         background: rgba(0,0,0,0.8); color: lime; padding: 10px 20px; border-radius: 8px;
-        font-family: monospace; font-size: 16px; z-index: 9999; display: none; pointer-events: none;
+        font-family: monospace; font-size: 16px; z-index: 9999; display: none; pointer-events: none; text-align: center;
       }
     </style>
   </head>
@@ -99,15 +122,15 @@
         <a-asset-item id="lab-kit" src="./assets/titration_final.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="ar-camera" position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity light="type: ambient; intensity: 1.2; color: #ffffff;"></a-entity>
       <a-entity light="type: directional; intensity: 1.5; color: #ffffff;" position="1 2 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.5; color: #e0f7fa;" position="-1 0.5 -1"></a-entity>
 
-      <a-entity id="image-target" mindar-image-target="targetIndex: 0">
+      <a-entity id="image-target" mindar-image-target="targetIndex: 0" sticky-ar>
         
-        <a-entity id="model-wrapper" touch-controls>
+        <a-entity id="model-wrapper" custom-controls>
             <a-gltf-model id="titration-setup" 
                           src="#lab-kit" 
                           scale="0.5 0.5 0.5" 
@@ -119,13 +142,8 @@
     </a-scene>
 
     <script>
-      const target = document.querySelector('#image-target');
-      const modelWrapper = document.querySelector('#model-wrapper');
-      const camera = document.querySelector('#ar-camera');
       const setup = document.querySelector('#titration-setup');
       const debugUI = document.querySelector('#debug-ui');
-      
-      let isUnlocked = false;
       let dropCount = 0;
       let isAnimating = false;
 
@@ -135,19 +153,7 @@
           setTimeout(() => { debugUI.style.display = 'none'; }, 2000);
       }
 
-      // FEATURE 1: STICKY AR (Lock model to screen after scan)
-      target.addEventListener('targetFound', () => {
-        if (!isUnlocked) {
-          isUnlocked = true;
-          // Detach from the target image and glue it directly to the camera
-          camera.appendChild(modelWrapper);
-          // Push it 2.5 meters straight in front of the lens so it's perfectly visible
-          modelWrapper.setAttribute('position', '0 -0.5 -2.5');
-          showDebug("Model Locked to Screen!");
-        }
-      });
-
-      // FEATURE 2: SHADER FIX (Keeps liquids sharp)
+      // SHADER FIXES
       setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
@@ -173,9 +179,11 @@
          }
       });
 
-      // FEATURE 3: TAP TO ANIMATE & COLOR SWAP
+      // TAP TO ANIMATE
       window.addEventListener('click', () => {
-        if (isAnimating || !isUnlocked) return; // Wait until scanned and not falling
+        // Wait until unlocked, and prevent spamming
+        const targetEntity = document.querySelector('#image-target').components['sticky-ar'];
+        if (isAnimating || !targetEntity || !targetEntity.isUnlocked) return; 
         
         dropCount++;
         isAnimating = true;
