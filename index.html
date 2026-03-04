@@ -9,31 +9,68 @@
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <script>
-      AFRAME.registerComponent('drag-rotate', {
-        schema: { speed: { default: 1 } },
+      AFRAME.registerComponent('touch-controls', {
+        schema: { 
+          rotationSpeed: { default: 1 },
+          minScale: { default: 0.1 },
+          maxScale: { default: 5 }
+        },
         init: function () {
           this.ifMouseDown = false;
           this.x_cord = 0;
           this.y_cord = 0;
-          document.addEventListener('touchstart', this.OnDocumentTouchStart.bind(this));
-          document.addEventListener('touchend', this.OnDocumentTouchEnd.bind(this));
-          document.addEventListener('touchmove', this.OnDocumentTouchMove.bind(this));
+          this.initialDistance = 0;
+          this.initialScale = this.el.object3D.scale.clone();
+
+          document.addEventListener('touchstart', this.OnTouchStart.bind(this));
+          document.addEventListener('touchend', this.OnTouchEnd.bind(this));
+          document.addEventListener('touchmove', this.OnTouchMove.bind(this));
         },
-        OnDocumentTouchStart: function (event) { 
+        OnTouchStart: function (event) { 
+          if (event.touches.length === 1) {
             this.ifMouseDown = true; 
             this.x_cord = event.touches[0].clientX; 
             this.y_cord = event.touches[0].clientY; 
+          } else if (event.touches.length === 2) {
+            this.ifMouseDown = false; // Stop rotating so we can zoom safely
+            this.initialDistance = this.getDistance(event.touches);
+            this.initialScale = this.el.object3D.scale.clone();
+          }
         },
-        OnDocumentTouchEnd: function () { this.ifMouseDown = false; },
-        OnDocumentTouchMove: function (event) {
-          if (this.ifMouseDown) {
+        OnTouchEnd: function () { 
+          this.ifMouseDown = false; 
+        },
+        OnTouchMove: function (event) {
+          // ROTATE
+          if (this.ifMouseDown && event.touches.length === 1) {
             let temp_x = event.touches[0].clientX - this.x_cord;
             let temp_y = event.touches[0].clientY - this.y_cord;
-            this.el.object3D.rotation.y += temp_x * this.data.speed / 100;
-            this.el.object3D.rotation.x += temp_y * this.data.speed / 100;
+            this.el.object3D.rotation.y += temp_x * this.data.rotationSpeed / 100;
+            this.el.object3D.rotation.x += temp_y * this.data.rotationSpeed / 100;
             this.x_cord = event.touches[0].clientX;
             this.y_cord = event.touches[0].clientY;
+          } 
+          // ZOOM (Scale)
+          else if (event.touches.length === 2) {
+            let currentDistance = this.getDistance(event.touches);
+            let scaleFactor = currentDistance / this.initialDistance;
+            
+            let newScaleX = this.initialScale.x * scaleFactor;
+            let newScaleY = this.initialScale.y * scaleFactor;
+            let newScaleZ = this.initialScale.z * scaleFactor;
+
+            // Prevent it from getting too massive or too microscopic
+            newScaleX = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleX));
+            newScaleY = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleY));
+            newScaleZ = Math.max(this.data.minScale, Math.min(this.data.maxScale, newScaleZ));
+
+            this.el.object3D.scale.set(newScaleX, newScaleY, newScaleZ);
           }
+        },
+        getDistance: function(touches) {
+          let dx = touches[0].clientX - touches[1].clientX;
+          let dy = touches[0].clientY - touches[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
         }
       });
     </script>
@@ -62,26 +99,33 @@
         <a-asset-item id="lab-kit" src="./assets/titration_final.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera id="ar-camera" position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity light="type: ambient; intensity: 1.2; color: #ffffff;"></a-entity>
       <a-entity light="type: directional; intensity: 1.5; color: #ffffff;" position="1 2 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.5; color: #e0f7fa;" position="-1 0.5 -1"></a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-entity drag-rotate>
+      <a-entity id="image-target" mindar-image-target="targetIndex: 0">
+        
+        <a-entity id="model-wrapper" touch-controls>
             <a-gltf-model id="titration-setup" 
                           src="#lab-kit" 
                           scale="0.5 0.5 0.5" 
                           position="0 -0.5 0">
             </a-gltf-model>
         </a-entity>
+
       </a-entity>
     </a-scene>
 
     <script>
+      const target = document.querySelector('#image-target');
+      const modelWrapper = document.querySelector('#model-wrapper');
+      const camera = document.querySelector('#ar-camera');
       const setup = document.querySelector('#titration-setup');
       const debugUI = document.querySelector('#debug-ui');
+      
+      let isUnlocked = false;
       let dropCount = 0;
       let isAnimating = false;
 
@@ -91,28 +135,32 @@
           setTimeout(() => { debugUI.style.display = 'none'; }, 2000);
       }
 
-      // STEP 1: FIX SHADERS WHEN MODEL LOADS
+      // FEATURE 1: STICKY AR (Lock model to screen after scan)
+      target.addEventListener('targetFound', () => {
+        if (!isUnlocked) {
+          isUnlocked = true;
+          // Detach from the target image and glue it directly to the camera
+          camera.appendChild(modelWrapper);
+          // Push it 2.5 meters straight in front of the lens so it's perfectly visible
+          modelWrapper.setAttribute('position', '0 -0.5 -2.5');
+          showDebug("Model Locked to Screen!");
+        }
+      });
+
+      // FEATURE 2: SHADER FIX (Keeps liquids sharp)
       setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
-             
-             // --- THE WEBGL TRANSPARENCY FIX ---
              mesh.traverse((node) => {
                  if (node.isMesh && node.material) {
-                     // 1. Force Liquids and Drop to be 100% Solid & Draw First
                      if (node.name.includes('Liquid') || node.name.includes('Sphere')) {
                          node.material.transparent = false;
                          node.material.opacity = 1.0;
                          node.material.depthWrite = true;
                          node.material.renderOrder = 1;
-                         
-                         // Strip away Blender glass properties & recompile
-                         if (node.material.transmission !== undefined) {
-                             node.material.transmission = 0;
-                         }
+                         if (node.material.transmission !== undefined) node.material.transmission = 0;
                          node.material.needsUpdate = true; 
                      }
-                     // 2. Force Glass to let liquids show through & Draw Last
                      else if (node.material.transparent || node.material.opacity < 1.0) {
                          node.material.depthWrite = false;
                          node.material.renderOrder = 2;
@@ -120,31 +168,23 @@
                      }
                  }
              });
-             // -----------------------------------
-
-             // Hide the Pink Liquid initially
              const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
              if (pinkLiquid) pinkLiquid.visible = false; 
-             
-             showDebug("Model Loaded & Shaders Recompiled");
          }
       });
 
-      // STEP 2: FULL-SCREEN TAP DETECTOR
+      // FEATURE 3: TAP TO ANIMATE & COLOR SWAP
       window.addEventListener('click', () => {
-        if (isAnimating) return; 
+        if (isAnimating || !isUnlocked) return; // Wait until scanned and not falling
         
         dropCount++;
         isAnimating = true;
-        showDebug("TAP " + dropCount + " REGISTERED!");
 
-        // Fire Blender Animation
         setup.removeAttribute('animation-mixer');
         setTimeout(() => {
             setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
         }, 10);
 
-        // STEP 3: 7-CLICK LOGIC
         const onAnimationFinish = function() {
           setup.removeEventListener('animation-finished', onAnimationFinish);
           isAnimating = false; 
@@ -154,12 +194,10 @@
             if (mesh) {
                 const clearLiquid = mesh.getObjectByName('Liquid_Clear');
                 const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
-                
                 if (clearLiquid) clearLiquid.visible = false; 
                 if (pinkLiquid) pinkLiquid.visible = true;    
             }
             
-            // Success Popup
             const alertBox = document.createElement('div');
             alertBox.innerHTML = "Equivalence Point Reached!";
             alertBox.style.cssText = "position:absolute; top:20%; left:50%; transform:translateX(-50%); background:white; padding:15px; border-radius:10px; font-family:sans-serif; font-weight:bold; color:#FF1493; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.4); text-align: center;";
@@ -170,7 +208,6 @@
 
         setup.addEventListener('animation-finished', onAnimationFinish);
         
-        // Anti-Freeze Failsafe (In case animation takes too long or glitches)
         setTimeout(() => {
             if(isAnimating) {
                 isAnimating = false;
