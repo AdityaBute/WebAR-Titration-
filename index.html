@@ -9,23 +9,45 @@
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
     <script>
-      AFRAME.registerComponent('sticky-ar', {
+      AFRAME.registerComponent('proxy-tracker', {
         init: function () {
           this.isUnlocked = false;
-          this.el.addEventListener('targetFound', () => {
-            if (!this.isUnlocked) {
-              this.isUnlocked = true;
-              const debugUI = document.querySelector('#debug-ui');
-              debugUI.style.display = 'block';
-              debugUI.innerText = "Model Unlocked! You can remove the paper.";
-              setTimeout(() => { debugUI.style.display = 'none'; }, 3000);
-            }
-          });
+          this.cameraObj = document.querySelector('a-camera').object3D;
+          this.targetObj = document.querySelector('#tracker-wrapper').object3D;
+          // Set the hover distance: 0 left/right, 0.5 down, 3 meters forward
+          this.localOffset = new THREE.Vector3(0, -0.5, -3); 
         },
         tick: function () {
-          // If it has been scanned once, never let MindAR hide it again
-          if (this.isUnlocked) {
-            this.el.object3D.visible = true;
+          const target = document.querySelector('#image-target');
+
+          // SCENARIO A: The camera can see the paper
+          if (target && target.object3D.visible) {
+            if (!this.isUnlocked) {
+              this.isUnlocked = true;
+              this.targetObj.visible = true;
+              const debugUI = document.querySelector('#debug-ui');
+              debugUI.style.display = 'block';
+              debugUI.innerText = "Model Unlocked! Remove the paper.";
+              setTimeout(() => { debugUI.style.display = 'none'; }, 3000);
+            }
+            // Glue the model to the paper
+            this.targetObj.position.copy(target.object3D.position);
+            this.targetObj.quaternion.copy(target.object3D.quaternion);
+            this.targetObj.scale.copy(target.object3D.scale);
+          }
+          
+          // SCENARIO B: The paper is removed
+          else if (this.isUnlocked) {
+            // Calculate a point exactly 3 meters in front of the phone camera
+            let offset = this.localOffset.clone();
+            offset.applyMatrix4(this.cameraObj.matrixWorld);
+
+            // Teleport the model there and make it face the user
+            this.targetObj.position.copy(offset);
+            this.targetObj.quaternion.copy(this.cameraObj.quaternion);
+            
+            // Standardize the scale so it doesn't warp
+            this.targetObj.scale.set(1, 1, 1);
           }
         }
       });
@@ -64,7 +86,6 @@
           this.isDragging = false; 
         },
         onTouchMove: function (e) {
-          // Rotate (1 Finger)
           if (this.isDragging && e.touches.length === 1) {
             let temp_x = e.touches[0].clientX - this.x_cord;
             let temp_y = e.touches[0].clientY - this.y_cord;
@@ -72,9 +93,7 @@
             this.el.object3D.rotation.x += temp_y * this.data.rotationSpeed / 100;
             this.x_cord = e.touches[0].clientX;
             this.y_cord = e.touches[0].clientY;
-          } 
-          // Zoom (2 Fingers)
-          else if (e.touches.length === 2) {
+          } else if (e.touches.length === 2) {
             if (this.initialDist === 0) return;
             let currentDist = this.getDist(e.touches);
             let factor = currentDist / this.initialDist;
@@ -116,7 +135,8 @@
              color-space="sRGB" 
              renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, sortObjects: true" 
              vr-mode-ui="enabled: false" 
-             device-orientation-permission-ui="enabled: false">
+             device-orientation-permission-ui="enabled: false"
+             proxy-tracker>
       
       <a-assets>
         <a-asset-item id="lab-kit" src="./assets/titration_final.glb"></a-asset-item>
@@ -128,17 +148,18 @@
       <a-entity light="type: directional; intensity: 1.5; color: #ffffff;" position="1 2 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.5; color: #e0f7fa;" position="-1 0.5 -1"></a-entity>
 
-      <a-entity id="image-target" mindar-image-target="targetIndex: 0" sticky-ar>
-        
-        <a-entity id="model-wrapper" custom-controls>
-            <a-gltf-model id="titration-setup" 
-                          src="#lab-kit" 
-                          scale="0.5 0.5 0.5" 
-                          position="0 -0.5 0">
-            </a-gltf-model>
-        </a-entity>
+      <a-entity id="image-target" mindar-image-target="targetIndex: 0"></a-entity>
 
+      <a-entity id="tracker-wrapper" visible="false">
+          <a-entity id="model-wrapper" custom-controls>
+              <a-gltf-model id="titration-setup" 
+                            src="#lab-kit" 
+                            scale="0.5 0.5 0.5" 
+                            position="0 -0.5 0">
+              </a-gltf-model>
+          </a-entity>
       </a-entity>
+
     </a-scene>
 
     <script>
@@ -153,7 +174,6 @@
           setTimeout(() => { debugUI.style.display = 'none'; }, 2000);
       }
 
-      // SHADER FIXES
       setup.addEventListener('model-loaded', () => {
          const mesh = setup.getObject3D('mesh');
          if (mesh) {
@@ -179,11 +199,9 @@
          }
       });
 
-      // TAP TO ANIMATE
       window.addEventListener('click', () => {
-        // Wait until unlocked, and prevent spamming
-        const targetEntity = document.querySelector('#image-target').components['sticky-ar'];
-        if (isAnimating || !targetEntity || !targetEntity.isUnlocked) return; 
+        const outerWrapper = document.querySelector('#tracker-wrapper');
+        if (isAnimating || !outerWrapper.object3D.visible) return; 
         
         dropCount++;
         isAnimating = true;
