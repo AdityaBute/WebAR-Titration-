@@ -12,63 +12,115 @@
       body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; }
       .mindar-ui-overlay { pointer-events: none; }
       
-      /* UI Menu */
+      /* The Main Menu Overlay */
       #ar-menu {
-        position: absolute; bottom: -100%; left: 50%; transform: translateX(-50%);
-        width: 90%; max-width: 400px; background: rgba(20, 20, 25, 0.85);
-        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px 24px 0 0;
-        padding: 30px 20px 40px 20px; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-        z-index: 9999; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        text-align: center; pointer-events: auto;
+        position: absolute;
+        bottom: -100%; /* Starts hidden off-screen */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 400px;
+        background: rgba(20, 20, 25, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px 24px 0 0;
+        padding: 30px 20px 40px 20px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        z-index: 9999;
+        transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        text-align: center;
+        pointer-events: auto;
       }
-      #ar-menu.visible { bottom: 0; }
+
+      #ar-menu.visible { bottom: 0; } /* Slides up smoothly */
+
       #ar-menu h2 { color: #ffffff; margin: 0 0 5px 0; font-size: 24px; font-weight: 600; }
       #ar-menu p { color: #aaaaaa; margin: 0 0 25px 0; font-size: 14px; }
 
-      /* Buttons */
+      /* The Menu Buttons */
       .menu-btn {
-        display: flex; align-items: center; justify-content: center; width: 100%;
-        background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 18px; margin-bottom: 15px; border-radius: 16px; font-size: 16px; font-weight: 500;
-        cursor: pointer; transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 18px;
+        margin-bottom: 15px;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
       }
-      .menu-btn:hover, .menu-btn:active { background: rgba(255, 20, 147, 0.3); border-color: rgba(255, 20, 147, 0.6); transform: scale(0.98); }
+
+      .menu-btn:hover, .menu-btn:active {
+        background: rgba(255, 20, 147, 0.3); /* Pink glow on tap */
+        border-color: rgba(255, 20, 147, 0.6);
+        transform: scale(0.98);
+      }
+
       .menu-btn .icon { font-size: 24px; margin-right: 12px; }
 
-      /* Back Button */
+      /* The Back Button (Floats top left) */
       #back-btn {
-        position: absolute; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(8px); color: white; border: 1px solid rgba(255,255,255,0.2);
-        padding: 10px 15px; border-radius: 30px; font-weight: bold; z-index: 9999;
-        cursor: pointer; display: none; pointer-events: auto;
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 10px 15px;
+        border-radius: 30px;
+        font-weight: bold;
+        z-index: 9999;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
       }
 
+      #back-btn.visible { opacity: 1; pointer-events: auto; }
+      
       /* Success Popup */
       #success-popup {
         position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
         background: white; padding: 15px 25px; border-radius: 30px;
         font-family: sans-serif; font-weight: bold; color: #FF1493;
-        z-index: 9999; box-shadow: 0px 8px 15px rgba(0,0,0,0.3); display: none;
+        z-index: 9999; box-shadow: 0px 8px 15px rgba(0,0,0,0.3);
+        opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
       }
+      #success-popup.visible { opacity: 1; }
+
     </style>
   </head>
 
   <body>
 
-    <button id="back-btn">← Back to Scanner</button>
+    <button id="back-btn">← Menu</button>
     <div id="success-popup">Equivalence Point Reached!</div>
     
     <div id="ar-menu">
       <h2>Titration Lab</h2>
       <p>Target Scanned! Choose your experience.</p>
-      <button class="menu-btn" id="btn-3d"><span class="icon">🧪</span> Interactive 3D Model</button>
-      <button class="menu-btn" id="btn-video"><span class="icon">▶️</span> Watch Explanation Video</button>
+      
+      <button class="menu-btn" id="btn-3d">
+        <span class="icon">🧪</span> Interactive 3D Model
+      </button>
+      
+      <button class="menu-btn" id="btn-video">
+        <span class="icon">▶️</span> Watch Explanation Video
+      </button>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
-             color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, sortObjects: true" 
-             vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+             color-space="sRGB" 
+             renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, sortObjects: true" 
+             vr-mode-ui="enabled: false" 
+             device-orientation-permission-ui="enabled: false">
       
       <a-assets>
         <a-asset-item id="lab-kit" src="./assets/titration_final.glb"></a-asset-item>
@@ -77,22 +129,28 @@
 
       <a-entity light="type: ambient; intensity: 1.2; color: #ffffff;"></a-entity>
       <a-entity light="type: directional; intensity: 1.5; color: #ffffff;" position="1 2 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.5; color: #e0f7fa;" position="-1 0.5 -1"></a-entity>
 
       <a-camera id="ar-camera" position="0 0 0" look-controls="enabled: false">
-          
           <a-entity id="hud-model" visible="false" position="0 -0.5 -3">
-              <a-gltf-model id="titration-setup" src="#lab-kit" scale="0.5 0.5 0.5" position="0 0 0"></a-gltf-model>
+              <a-gltf-model class="titration-setup" src="#lab-kit" scale="0.5 0.5 0.5" position="0 0 0"></a-gltf-model>
           </a-entity>
-          
-          <a-video id="hud-video" src="#titration-vid" position="0 0 -3" scale="3 1.6875 3" visible="false"></a-video>
-          
       </a-camera>
 
-      <a-entity id="image-target" mindar-image-target="targetIndex: 0"></a-entity>
+      <a-entity id="image-target" mindar-image-target="targetIndex: 0">
+          
+          <a-entity id="target-model" visible="false" position="0 -0.5 0">
+              <a-gltf-model class="titration-setup" src="#lab-kit" scale="0.5 0.5 0.5" position="0 0 0"></a-gltf-model>
+          </a-entity>
+
+          <a-video id="ar-video" src="#titration-vid" position="0 0 0" scale="1 0.56 1" visible="false"></a-video>
+          
+      </a-entity>
 
     </a-scene>
 
     <script>
+      // DOM Elements
       const arMenu = document.getElementById('ar-menu');
       const backBtn = document.getElementById('back-btn');
       const popup = document.getElementById('success-popup');
@@ -101,100 +159,131 @@
       const btnVideo = document.getElementById('btn-video');
       
       const targetEntity = document.querySelector('#image-target');
-      const hudModel = document.querySelector('#hud-model');
-      const hudVideo = document.querySelector('#hud-video');
-      const setup = document.querySelector('#titration-setup');
+      const hudWrapper = document.querySelector('#hud-model');
+      const targetWrapper = document.querySelector('#target-model');
+      const arVideo = document.querySelector('#ar-video');
       const vidAsset = document.querySelector('#titration-vid');
+      const models = document.querySelectorAll('.titration-setup');
 
-      let activeExperience = null; 
+      // State Variables
+      let activeExperience = null; // null, '3d', or 'video'
       let isTargetVisible = false;
       let dropCount = 0;
       let isAnimating = false;
 
-      // 1. FIX SHADERS
-      setup.addEventListener('model-loaded', () => {
-         const mesh = setup.getObject3D('mesh');
-         if (mesh) {
-             mesh.traverse((node) => {
-                 if (node.isMesh && node.material) {
-                     if (node.name.includes('Liquid') || node.name.includes('Sphere')) {
-                         node.material.transparent = false;
-                         node.material.opacity = 1.0;
-                         node.material.depthWrite = true;
-                         node.material.renderOrder = 1;
-                         if (node.material.transmission !== undefined) node.material.transmission = 0;
-                         node.material.needsUpdate = true; 
-                     } else if (node.material.transparent || node.material.opacity < 1.0) {
-                         node.material.depthWrite = false;
-                         node.material.renderOrder = 2;
-                         node.material.needsUpdate = true;
+      // 1. SHADER FIXES (Keeps Pink Liquid Solid)
+      models.forEach(setup => {
+          setup.addEventListener('model-loaded', () => {
+             const mesh = setup.getObject3D('mesh');
+             if (mesh) {
+                 mesh.traverse((node) => {
+                     if (node.isMesh && node.material) {
+                         if (node.name.includes('Liquid') || node.name.includes('Sphere')) {
+                             node.material.transparent = false;
+                             node.material.opacity = 1.0;
+                             node.material.depthWrite = true;
+                             node.material.renderOrder = 1;
+                             if (node.material.transmission !== undefined) node.material.transmission = 0;
+                             node.material.needsUpdate = true; 
+                         } else if (node.material.transparent || node.material.opacity < 1.0) {
+                             node.material.depthWrite = false;
+                             node.material.renderOrder = 2;
+                             node.material.needsUpdate = true;
+                         }
                      }
-                 }
-             });
-             const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
-             if (pinkLiquid) pinkLiquid.visible = false; 
-         }
+                 });
+                 const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+                 if (pinkLiquid) pinkLiquid.visible = false; 
+             }
+          });
       });
 
-      // 2. SCANNER TRIGGERS
+      // 2. SCANNING LOGIC
       targetEntity.addEventListener('targetFound', () => {
           isTargetVisible = true;
-          // Only show menu if they haven't picked something yet
-          if (!activeExperience) arMenu.classList.add('visible');
+          
+          if (!activeExperience) {
+              // Show Menu if no choice made yet
+              arMenu.classList.add('visible');
+          } else if (activeExperience === '3d') {
+              // User returns to paper while 3D is active
+              targetWrapper.setAttribute('visible', true);
+              hudWrapper.setAttribute('visible', false);
+          } else if (activeExperience === 'video') {
+              // User returns to paper while Video is active
+              arVideo.setAttribute('visible', true);
+              vidAsset.play();
+          }
       });
 
       targetEntity.addEventListener('targetLost', () => {
           isTargetVisible = false;
-          // Hide menu if they look away before clicking
-          arMenu.classList.remove('visible'); 
-          // NOTE: We do absolutely nothing to the activeExperience here. 
-          // If they are watching the video or looking at the model, it stays!
+          arMenu.classList.remove('visible'); // Hide menu if they look away
+          
+          if (activeExperience === '3d') {
+              // Sticky AR: Swap to HUD
+              targetWrapper.setAttribute('visible', false);
+              hudWrapper.setAttribute('visible', true);
+          } else if (activeExperience === 'video') {
+              // Pause video if target is lost
+              arVideo.setAttribute('visible', false);
+              vidAsset.pause();
+          }
       });
 
-      // 3. MENU BUTTONS
+      // 3. UI BUTTON CLICKS
       btn3D.addEventListener('click', () => {
           activeExperience = '3d';
           arMenu.classList.remove('visible');
-          backBtn.style.display = 'block';
-          hudModel.setAttribute('visible', true);
+          backBtn.classList.add('visible');
+          
+          if (isTargetVisible) {
+              targetWrapper.setAttribute('visible', true);
+              hudWrapper.setAttribute('visible', false);
+          } else {
+              targetWrapper.setAttribute('visible', false);
+              hudWrapper.setAttribute('visible', true);
+          }
       });
 
       btnVideo.addEventListener('click', () => {
           activeExperience = 'video';
           arMenu.classList.remove('visible');
-          backBtn.style.display = 'block';
-          hudVideo.setAttribute('visible', true);
-          vidAsset.play();
+          backBtn.classList.add('visible');
+          
+          if (isTargetVisible) {
+              arVideo.setAttribute('visible', true);
+              vidAsset.play();
+          }
       });
 
-      // 4. BACK BUTTON (Reset)
       backBtn.addEventListener('click', () => {
           activeExperience = null;
-          backBtn.style.display = 'none';
+          backBtn.classList.remove('visible');
           
-          // Hide everything
-          hudModel.setAttribute('visible', false);
-          hudVideo.setAttribute('visible', false);
-          
-          // Reset Video
+          // Hide everything & pause video
+          targetWrapper.setAttribute('visible', false);
+          hudWrapper.setAttribute('visible', false);
+          arVideo.setAttribute('visible', false);
           vidAsset.pause();
-          vidAsset.currentTime = 0;
           
-          // Reset 3D Model
+          // Reset 3D Model drops
           dropCount = 0;
-          const mesh = setup.getObject3D('mesh');
-          if (mesh) {
-              const clearLiquid = mesh.getObjectByName('Liquid_Clear');
-              const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
-              if (clearLiquid) clearLiquid.visible = true; 
-              if (pinkLiquid) pinkLiquid.visible = false;    
-          }
+          models.forEach(setup => {
+             const mesh = setup.getObject3D('mesh');
+             if (mesh) {
+                 const clearLiquid = mesh.getObjectByName('Liquid_Clear');
+                 const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+                 if (clearLiquid) clearLiquid.visible = true; 
+                 if (pinkLiquid) pinkLiquid.visible = false;    
+             }
+          });
 
-          // Bring menu back instantly if they are still pointing at the book
+          // Show menu if still looking at paper
           if (isTargetVisible) arMenu.classList.add('visible');
       });
 
-      // 5. TOUCH CONTROLS (Rotation & Zoom for 3D Model)
+      // 4. TOUCH CONTROLS (Only affects 3D model)
       let isDragging = false;
       let lastX = 0, lastY = 0;
       let initialDist = 0;
@@ -207,9 +296,9 @@
       }
 
       window.addEventListener('touchstart', (e) => {
-          if (activeExperience !== '3d' || e.target.tagName === 'BUTTON') return; 
+          if (activeExperience !== '3d') return; // Ignore if on video
           
-          if (e.touches.length === 1) {
+          if (e.touches.length === 1 && e.target.tagName !== 'BUTTON') {
               isDragging = true;
               lastX = e.touches[0].clientX;
               lastY = e.touches[0].clientY;
@@ -227,10 +316,10 @@
           if (isDragging && e.touches.length === 1) {
               let deltaX = e.touches[0].clientX - lastX;
               let deltaY = e.touches[0].clientY - lastY;
-              
-              hudModel.object3D.rotation.y += deltaX * 0.01;
-              hudModel.object3D.rotation.x += deltaY * 0.01;
-              
+              [hudWrapper, targetWrapper].forEach(el => {
+                  el.object3D.rotation.y += deltaX * 0.01;
+                  el.object3D.rotation.x += deltaY * 0.01;
+              });
               lastX = e.touches[0].clientX;
               lastY = e.touches[0].clientY;
           } else if (e.touches.length === 2 && initialDist > 0) {
@@ -239,48 +328,54 @@
               let newScale = currentScale * scaleFactor;
               newScale = Math.max(0.5, Math.min(3, newScale)); 
               
-              hudModel.object3D.scale.set(newScale, newScale, newScale);
-              
+              [hudWrapper, targetWrapper].forEach(el => {
+                  el.object3D.scale.set(newScale, newScale, newScale);
+              });
               currentScale = newScale;
               initialDist = currentDist; 
           }
       });
 
-      // 6. TAP TO ANIMATE
+      // 5. TAP TO ANIMATE (Only for 3D model)
       window.addEventListener('click', (e) => {
+        // Ignore clicks on UI buttons or if video is active
         if (activeExperience !== '3d' || isAnimating || e.target.tagName === 'BUTTON') return; 
         
         dropCount++;
         isAnimating = true;
 
-        setup.removeAttribute('animation-mixer');
-        setTimeout(() => {
-            setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
-        }, 10);
+        models.forEach(setup => {
+            setup.removeAttribute('animation-mixer');
+            setTimeout(() => {
+                setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
+            }, 10);
+        });
 
         const onAnimationFinish = function() {
-          setup.removeEventListener('animation-finished', onAnimationFinish);
+          models[0].removeEventListener('animation-finished', onAnimationFinish);
           isAnimating = false; 
 
           if (dropCount === 7) {
-              const mesh = setup.getObject3D('mesh');
-              if (mesh) {
-                  const clearLiquid = mesh.getObjectByName('Liquid_Clear');
-                  const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
-                  if (clearLiquid) clearLiquid.visible = false; 
-                  if (pinkLiquid) pinkLiquid.visible = true;    
-              }
+              models.forEach(setup => {
+                  const mesh = setup.getObject3D('mesh');
+                  if (mesh) {
+                      const clearLiquid = mesh.getObjectByName('Liquid_Clear');
+                      const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
+                      if (clearLiquid) clearLiquid.visible = false; 
+                      if (pinkLiquid) pinkLiquid.visible = true;    
+                  }
+              });
             
-              popup.style.display = 'block';
-              setTimeout(() => popup.style.display = 'none', 4000);
+              popup.classList.add('visible');
+              setTimeout(() => popup.classList.remove('visible'), 4000);
           }
         };
 
-        setup.addEventListener('animation-finished', onAnimationFinish);
+        models[0].addEventListener('animation-finished', onAnimationFinish);
         setTimeout(() => {
             if (isAnimating) {
                 isAnimating = false;
-                setup.removeEventListener('animation-finished', onAnimationFinish);
+                models[0].removeEventListener('animation-finished', onAnimationFinish);
             }
         }, 1500); 
       });
