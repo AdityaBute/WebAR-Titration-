@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AR Titration Experience</title>
+    <title>Universal AR Scanner</title>
     
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -47,7 +47,7 @@
       }
       #back-btn.visible { opacity: 1; pointer-events: auto; }
       
-      /* Success Popup */
+      /* Titration Success Popup */
       #success-popup {
         position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
         background: white; padding: 15px 25px; border-radius: 30px;
@@ -64,10 +64,14 @@
     <div id="success-popup">Equivalence Point Reached! pH = 7.0</div>
     
     <div id="ar-menu">
-      <h2>Titration Lab</h2>
+      <h2 id="menu-title">Lab Environment</h2>
       <p>Target Scanned! Choose your experience.</p>
-      <button class="menu-btn" id="btn-3d"><span class="icon">🧪</span> Interactive 3D Model</button>
-      <button class="menu-btn" id="btn-video"><span class="icon">▶️</span> Watch Explanation Video</button>
+      <button class="menu-btn" id="btn-3d">
+          <span class="icon" id="icon-3d">🧪</span> <span id="text-3d">Interactive 3D Model</span>
+      </button>
+      <button class="menu-btn" id="btn-video">
+          <span class="icon" id="icon-vid">▶️</span> <span id="text-vid">Watch Explanation Video</span>
+      </button>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
@@ -75,8 +79,11 @@
              vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <a-asset-item id="lab-kit" src="./assets/titration_final.glb"></a-asset-item>
+        <a-asset-item id="titration-model" src="./assets/titration_final.glb"></a-asset-item>
         <video id="titration-vid" src="./assets/titration_video.mp4" preload="auto" crossorigin="anonymous" loop="true" playsinline webkit-playsinline></video>
+        
+        <a-asset-item id="solar-model" src="./assets/solar_system_animation.glb"></a-asset-item>
+        <video id="solar-vid" src="./assets/solar_video.mp4" preload="auto" crossorigin="anonymous" loop="true" playsinline webkit-playsinline></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -85,10 +92,10 @@
       <a-entity light="type: directional; intensity: 1.5; color: #ffffff;" position="1 2 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.5; color: #e0f7fa;" position="-1 0.5 -1"></a-entity>
 
-      <a-entity id="image-target" mindar-image-target="targetIndex: 0">
+      <a-entity id="target-titration" mindar-image-target="targetIndex: 0">
           
-          <a-entity id="model-wrapper" visible="false" position="0 -0.5 0">
-              <a-gltf-model id="titration-setup" src="#lab-kit" scale="0.5 0.5 0.5" position="0 0 0"></a-gltf-model>
+          <a-entity id="wrapper-titration" visible="false" position="0 -0.5 0">
+              <a-gltf-model id="setup-titration" src="#titration-model" scale="0.5 0.5 0.5" position="0 0 0"></a-gltf-model>
 
               <a-entity position="0.5 1.2 0">
                   <a-text value="Burette (Titrant)" color="white" width="4" align="left"></a-text>
@@ -101,33 +108,63 @@
               </a-entity>
           </a-entity>
 
-          <a-video id="ar-video" src="#titration-vid" position="0 0 0" scale="1 0.56 1" visible="false"></a-video>
-          
+          <a-video id="ar-vid-titration" src="#titration-vid" position="0 0 0" scale="1 0.56 1" visible="false"></a-video>
       </a-entity>
+
+      <a-entity id="target-solar" mindar-image-target="targetIndex: 1">
+          
+          <a-entity id="wrapper-solar" visible="false" position="0 0 0">
+              <a-gltf-model id="setup-solar" src="#solar-model" scale="0.02 0.02 0.02" position="0 0 0" animation-mixer></a-gltf-model>
+          </a-entity>
+
+          <a-video id="ar-vid-solar" src="#solar-vid" position="0 0 0" scale="1 0.56 1" visible="false"></a-video>
+      </a-entity>
+
     </a-scene>
 
     <script>
+      // DOM Elements
       const arMenu = document.getElementById('ar-menu');
       const backBtn = document.getElementById('back-btn');
       const popup = document.getElementById('success-popup');
+      
       const btn3D = document.getElementById('btn-3d');
       const btnVideo = document.getElementById('btn-video');
       
-      const targetEntity = document.querySelector('#image-target');
-      const modelWrapper = document.querySelector('#model-wrapper');
-      const setup = document.querySelector('#titration-setup');
-      const arVideo = document.querySelector('#ar-video');
-      const vidAsset = document.querySelector('#titration-vid');
-      const liquidText = document.querySelector('#liquid-text');
+      // Dynamic Menu Text Elements
+      const menuTitle = document.getElementById('menu-title');
+      const icon3D = document.getElementById('icon-3d');
+      const iconVid = document.getElementById('icon-vid');
+      const text3D = document.getElementById('text-3d');
+      const textVid = document.getElementById('text-vid');
 
-      let activeExperience = null; 
-      let isTargetVisible = false;
+      // Targets & Wrappers
+      const targetTitration = document.querySelector('#target-titration');
+      const targetSolar = document.querySelector('#target-solar');
+      
+      const wrapTitration = document.querySelector('#wrapper-titration');
+      const wrapSolar = document.querySelector('#wrapper-solar');
+      
+      const setupTitration = document.querySelector('#setup-titration');
+      const liquidText = document.querySelector('#liquid-text');
+      
+      const vidTitrationEnt = document.querySelector('#ar-vid-titration');
+      const vidSolarEnt = document.querySelector('#ar-vid-solar');
+      const vidAssetTitration = document.querySelector('#titration-vid');
+      const vidAssetSolar = document.querySelector('#solar-vid');
+
+      // State Variables
+      let activeTarget = null; // 'titration' or 'solar'
+      let activeExperience = null; // '3d' or 'video'
+      let activeWrapper = null; // Points to the currently active 3D wrapper for touch controls
+      
+      // Titration Animation Variables
       let dropCount = 0;
       let isAnimating = false;
 
-      // 1. SHADER FIXES
-      setup.addEventListener('model-loaded', () => {
-         const mesh = setup.getObject3D('mesh');
+      // 1. TITRATION SHADER FIXES (Keeps Pink Liquid Solid)
+      setupTitration.addEventListener('model-loaded', () => {
+         const mesh = setupTitration.getObject3D('mesh');
          if (mesh) {
              mesh.traverse((node) => {
                  if (node.isMesh && node.material) {
@@ -150,74 +187,129 @@
          }
       });
 
-      // 2. SCANNING LOGIC
-      targetEntity.addEventListener('targetFound', () => {
-          isTargetVisible = true;
+      // 2. SCANNING LOGIC (Dynamic Menu Switching)
+      
+      // Titration Found
+      targetTitration.addEventListener('targetFound', () => {
+          activeTarget = 'titration';
+          
+          // Update Menu for Titration
+          menuTitle.innerText = "Titration Lab";
+          icon3D.innerText = "🧪";
+          iconVid.innerText = "▶️";
+          text3D.innerText = "Interactive Titration";
+          textVid.innerText = "Watch Chemistry Video";
+
           if (!activeExperience) {
               arMenu.classList.add('visible');
           } else if (activeExperience === '3d') {
-              modelWrapper.setAttribute('visible', true);
+              wrapTitration.setAttribute('visible', true);
+              activeWrapper = wrapTitration;
           } else if (activeExperience === 'video') {
-              arVideo.setAttribute('visible', true);
-              vidAsset.play();
+              vidTitrationEnt.setAttribute('visible', true);
+              vidAssetTitration.play();
           }
       });
 
-      targetEntity.addEventListener('targetLost', () => {
-          isTargetVisible = false;
-          arMenu.classList.remove('visible');
+      // Solar System Found
+      targetSolar.addEventListener('targetFound', () => {
+          activeTarget = 'solar';
           
-          if (activeExperience === 'video') {
-              vidAsset.pause();
+          // Update Menu for Solar System
+          menuTitle.innerText = "The Solar System";
+          icon3D.innerText = "🪐";
+          iconVid.innerText = "🌌";
+          text3D.innerText = "Interactive Galaxy";
+          textVid.innerText = "Watch Planetary Video";
+
+          if (!activeExperience) {
+              arMenu.classList.add('visible');
+          } else if (activeExperience === '3d') {
+              wrapSolar.setAttribute('visible', true);
+              activeWrapper = wrapSolar;
+          } else if (activeExperience === 'video') {
+              vidSolarEnt.setAttribute('visible', true);
+              vidAssetSolar.play();
           }
       });
+
+      // Handle Target Loss (Safety Reset)
+      const handleTargetLost = () => {
+          activeTarget = null;
+          activeWrapper = null;
+          arMenu.classList.remove('visible');
+          
+          // Pause videos if playing
+          vidAssetTitration.pause();
+          vidAssetSolar.pause();
+      };
+      targetTitration.addEventListener('targetLost', handleTargetLost);
+      targetSolar.addEventListener('targetLost', handleTargetLost);
 
       // 3. UI BUTTON CLICKS
       btn3D.addEventListener('click', () => {
           activeExperience = '3d';
           arMenu.classList.remove('visible');
           backBtn.classList.add('visible');
-          if (isTargetVisible) modelWrapper.setAttribute('visible', true);
+          
+          if (activeTarget === 'titration') {
+              wrapTitration.setAttribute('visible', true);
+              activeWrapper = wrapTitration;
+          } else if (activeTarget === 'solar') {
+              wrapSolar.setAttribute('visible', true);
+              activeWrapper = wrapSolar;
+          }
       });
 
       btnVideo.addEventListener('click', () => {
           activeExperience = 'video';
           arMenu.classList.remove('visible');
           backBtn.classList.add('visible');
-          if (isTargetVisible) {
-              arVideo.setAttribute('visible', true);
-              vidAsset.play();
+          
+          if (activeTarget === 'titration') {
+              vidTitrationEnt.setAttribute('visible', true);
+              vidAssetTitration.play();
+          } else if (activeTarget === 'solar') {
+              vidSolarEnt.setAttribute('visible', true);
+              vidAssetSolar.play();
           }
       });
 
+      // Back to Menu Button
       backBtn.addEventListener('click', () => {
           activeExperience = null;
+          activeWrapper = null;
           backBtn.classList.remove('visible');
           
-          // Hide everything
-          modelWrapper.setAttribute('visible', false);
-          arVideo.setAttribute('visible', false);
-          vidAsset.pause();
-          vidAsset.currentTime = 0;
+          // Hide all wrappers and videos
+          wrapTitration.setAttribute('visible', false);
+          wrapSolar.setAttribute('visible', false);
+          vidTitrationEnt.setAttribute('visible', false);
+          vidSolarEnt.setAttribute('visible', false);
           
-          // Reset 3D Model Drops
+          // Pause all videos
+          vidAssetTitration.pause();
+          vidAssetSolar.pause();
+          vidAssetTitration.currentTime = 0;
+          vidAssetSolar.currentTime = 0;
+          
+          // Reset Titration Drops & Labels
           dropCount = 0;
-          const mesh = setup.getObject3D('mesh');
+          const mesh = setupTitration.getObject3D('mesh');
           if (mesh) {
               const clearLiquid = mesh.getObjectByName('Liquid_Clear');
               const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
               if (clearLiquid) clearLiquid.visible = true; 
               if (pinkLiquid) pinkLiquid.visible = false;    
           }
-          
-          // Reset Text Labels
           liquidText.setAttribute('value', 'HCl + Phenolphthalein');
           liquidText.setAttribute('color', '#00BFFF');
 
-          if (isTargetVisible) arMenu.classList.add('visible');
+          // Show menu if still looking at a target
+          if (activeTarget) arMenu.classList.add('visible');
       });
 
-      // 4. TOUCH CONTROLS (Pinch/Zoom/Rotate)
+      // 4. UNIVERSAL TOUCH CONTROLS (Pinch/Zoom/Rotate)
       let isDragging = false;
       let lastX = 0, lastY = 0;
       let initialDist = 0;
@@ -230,7 +322,7 @@
       }
 
       window.addEventListener('touchstart', (e) => {
-          if (activeExperience !== '3d') return; 
+          if (activeExperience !== '3d' || !activeWrapper) return; 
           
           if (e.touches.length === 1 && e.target.tagName !== 'BUTTON') {
               isDragging = true;
@@ -239,21 +331,21 @@
           } else if (e.touches.length === 2) {
               isDragging = false;
               initialDist = getDist(e.touches);
-              currentScale = modelWrapper.object3D.scale.x;
+              currentScale = activeWrapper.object3D.scale.x;
           }
       });
 
       window.addEventListener('touchend', () => { isDragging = false; });
 
       window.addEventListener('touchmove', (e) => {
-          if (activeExperience !== '3d') return;
+          if (activeExperience !== '3d' || !activeWrapper) return;
 
           if (isDragging && e.touches.length === 1) {
               let deltaX = e.touches[0].clientX - lastX;
               let deltaY = e.touches[0].clientY - lastY;
               
-              modelWrapper.object3D.rotation.y += deltaX * 0.01;
-              modelWrapper.object3D.rotation.x += deltaY * 0.01;
+              activeWrapper.object3D.rotation.y += deltaX * 0.01;
+              activeWrapper.object3D.rotation.x += deltaY * 0.01;
               
               lastX = e.touches[0].clientX;
               lastY = e.touches[0].clientY;
@@ -261,30 +353,31 @@
               let currentDist = getDist(e.touches);
               let scaleFactor = currentDist / initialDist;
               let newScale = currentScale * scaleFactor;
-              newScale = Math.max(0.5, Math.min(3, newScale)); 
+              newScale = Math.max(0.2, Math.min(4, newScale)); 
               
-              modelWrapper.object3D.scale.set(newScale, newScale, newScale);
+              activeWrapper.object3D.scale.set(newScale, newScale, newScale);
           }
       });
 
-      // 5. TAP TO ANIMATE
+      // 5. TITRATION TAP-TO-ANIMATE LOGIC
       window.addEventListener('click', (e) => {
-        if (activeExperience !== '3d' || isAnimating || e.target.tagName === 'BUTTON') return; 
+        // Only trigger if we are actively viewing the Titration 3D model
+        if (activeTarget !== 'titration' || activeExperience !== '3d' || isAnimating || e.target.tagName === 'BUTTON') return; 
         
         dropCount++;
         isAnimating = true;
 
-        setup.removeAttribute('animation-mixer');
+        setupTitration.removeAttribute('animation-mixer');
         setTimeout(() => {
-            setup.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
+            setupTitration.setAttribute('animation-mixer', 'clip: *; loop: once; crossFadeDuration: 0;');
         }, 10);
 
         const onAnimationFinish = function() {
-          setup.removeEventListener('animation-finished', onAnimationFinish);
+          setupTitration.removeEventListener('animation-finished', onAnimationFinish);
           isAnimating = false; 
 
           if (dropCount === 7) {
-              const mesh = setup.getObject3D('mesh');
+              const mesh = setupTitration.getObject3D('mesh');
               if (mesh) {
                   const clearLiquid = mesh.getObjectByName('Liquid_Clear');
                   const pinkLiquid = mesh.getObjectByName('Liquid_Pink');
@@ -292,7 +385,6 @@
                   if (pinkLiquid) pinkLiquid.visible = true;    
               }
 
-              // Update the scientific text!
               liquidText.setAttribute('value', 'Neutralized: NaCl + H2O');
               liquidText.setAttribute('color', '#FF1493');
             
@@ -301,11 +393,11 @@
           }
         };
 
-        setup.addEventListener('animation-finished', onAnimationFinish);
+        setupTitration.addEventListener('animation-finished', onAnimationFinish);
         setTimeout(() => {
             if (isAnimating) {
                 isAnimating = false;
-                setup.removeEventListener('animation-finished', onAnimationFinish);
+                setupTitration.removeEventListener('animation-finished', onAnimationFinish);
             }
         }, 1500); 
       });
