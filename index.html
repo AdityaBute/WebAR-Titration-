@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>EduAR | Spatial Scanner</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,41 +26,41 @@
       .mindar-ui-overlay { pointer-events: none; }
 
       /* =========================================
-         CUSTOM LUXURY LOADING SCREEN (Perfect Symmetry)
+         PERFECTLY SYMMETRICAL MOBILE LOADER
          ========================================= */
       #custom-loader {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: var(--bg-deep); z-index: 99999;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
+        gap: 35px; /* Forces exact mathematical symmetry between elements */
         transition: opacity 0.8s ease; padding: 20px;
       }
       
-      /* Cursive on Top, perfectly centered */
       .loader-cursive {
         font-family: 'Pinyon Script', cursive; 
-        font-size: clamp(3rem, 10vw, 4.5rem); 
+        font-size: clamp(3.5rem, 12vw, 4.5rem); 
         color: var(--liquid-gold);
-        margin-bottom: 35px; /* Perfect spacing to spinner */
+        margin: 0; padding: 0;
         text-shadow: 0 0 20px rgba(212, 175, 105, 0.5);
         animation: pulseText 2s infinite alternate;
         text-align: center;
-        line-height: 1.1;
+        line-height: 0.9;
       }
 
-      /* Glowing Gold Spinner in the Middle */
       .loader-ring {
-        width: 80px; height: 80px; border: 3px solid rgba(212, 175, 105, 0.1);
+        width: 70px; height: 70px; 
+        border: 3px solid rgba(212, 175, 105, 0.1);
         border-top: 3px solid var(--liquid-gold); border-radius: 50%;
         animation: spin 1s cubic-bezier(0.25, 1, 0.5, 1) infinite;
         box-shadow: 0 0 20px rgba(212, 175, 105, 0.4);
-        margin-bottom: 40px; /* Perfect spacing to subtext */
+        margin: 0; padding: 0;
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-      /* Clean Subtext on Bottom */
       .loader-text {
-        font-family: 'Montserrat', sans-serif; font-size: 0.85rem; letter-spacing: 3px;
+        font-family: 'Montserrat', sans-serif; font-size: 0.8rem; letter-spacing: 3px;
         text-transform: uppercase; color: rgba(255,255,255,0.7); text-align: center; line-height: 1.8;
+        margin: 0; padding: 0;
       }
       @keyframes pulseText { 0% { opacity: 0.7; } 100% { opacity: 1; } }
 
@@ -82,7 +82,6 @@
       #menu-title { font-family: 'Cormorant Garamond', serif; color: var(--text-cream); margin: 0 0 5px 0; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 1px; }
       #ar-menu p { color: rgba(255,255,255,0.6); margin: 0 0 25px 0; font-size: 0.85rem; letter-spacing: 1px; }
 
-      /* Luxury Menu Buttons */
       .menu-btn {
         display: flex; align-items: center; justify-content: center; width: 100%;
         background: rgba(212, 175, 105, 0.05); color: var(--liquid-gold); 
@@ -97,7 +96,6 @@
       }
       .menu-btn .icon { font-size: 22px; margin-right: 12px; }
 
-      /* The Back Button */
       #back-btn {
         position: absolute; top: 20px; left: 20px; background: var(--glass-bg);
         backdrop-filter: blur(10px); color: var(--liquid-gold); border: 1px solid var(--glass-border);
@@ -122,9 +120,8 @@
         padding: 10px 18px; border-radius: 30px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; letter-spacing: 1px; font-weight: 500; text-transform: uppercase;
         cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
       }
-      .sub-btn.active, .sub-btn:hover { background: var(--liquid-emerald); color: white; border-color: var(--liquid-emerald); box-shadow: 0 5px 15px rgba(15, 108, 79, 0.4); }
+      .sub-btn.active, .sub-btn:active { background: var(--liquid-emerald); color: white; border-color: var(--liquid-emerald); box-shadow: 0 5px 15px rgba(15, 108, 79, 0.4); }
       
-      /* Titration Success Popup */
       #success-popup {
         position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
         background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
@@ -141,7 +138,7 @@
     <div id="custom-loader">
         <div class="loader-cursive">Initializing<br>Workspace</div>
         <div class="loader-ring"></div>
-        <div class="loader-text">Downloading High-Fidelity 3D Assets<br>Please hold...</div>
+        <div class="loader-text">Deploying AR Optics<br>Please hold...</div>
     </div>
 
     <button id="back-btn">← Back</button>
@@ -169,7 +166,7 @@
              color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, sortObjects: true" 
              vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       
-      <a-assets timeout="15000">
+      <a-assets timeout="2000">
         <a-asset-item id="titration-model" src="./assets/titration_final.glb"></a-asset-item>
         <video id="titration-vid" src="./assets/titration_video.mp4" preload="none" crossorigin="anonymous" loop="true" playsinline webkit-playsinline></video>
         
@@ -233,13 +230,12 @@
 
     <script>
       // ==========================================
-      // LOADING SCREEN LOGIC
+      // LOADING SCREEN LOGIC (Lightning Fast)
       // ==========================================
-      // Hide the custom loader when MindAR engine is fully initialized and models are downloaded
       document.querySelector('a-scene').addEventListener('arReady', () => {
           const loader = document.getElementById('custom-loader');
           loader.style.opacity = '0';
-          setTimeout(() => loader.remove(), 800); // Wait for fade out, then remove from DOM
+          setTimeout(() => loader.remove(), 800); 
       });
 
       // ==========================================
