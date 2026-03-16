@@ -26,33 +26,41 @@
       .mindar-ui-overlay { pointer-events: none; }
 
       /* =========================================
-         CUSTOM LUXURY LOADING SCREEN
+         CUSTOM LUXURY LOADING SCREEN (Perfect Symmetry)
          ========================================= */
       #custom-loader {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: var(--bg-deep); z-index: 99999;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        transition: opacity 0.8s ease;
+        transition: opacity 0.8s ease; padding: 20px;
       }
       
-      /* Glowing Gold Spinner */
+      /* Cursive on Top, perfectly centered */
+      .loader-cursive {
+        font-family: 'Pinyon Script', cursive; 
+        font-size: clamp(3rem, 10vw, 4.5rem); 
+        color: var(--liquid-gold);
+        margin-bottom: 35px; /* Perfect spacing to spinner */
+        text-shadow: 0 0 20px rgba(212, 175, 105, 0.5);
+        animation: pulseText 2s infinite alternate;
+        text-align: center;
+        line-height: 1.1;
+      }
+
+      /* Glowing Gold Spinner in the Middle */
       .loader-ring {
         width: 80px; height: 80px; border: 3px solid rgba(212, 175, 105, 0.1);
         border-top: 3px solid var(--liquid-gold); border-radius: 50%;
         animation: spin 1s cubic-bezier(0.25, 1, 0.5, 1) infinite;
         box-shadow: 0 0 20px rgba(212, 175, 105, 0.4);
-        margin-bottom: 30px;
+        margin-bottom: 40px; /* Perfect spacing to subtext */
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-      .loader-cursive {
-        font-family: 'Pinyon Script', cursive; font-size: 3rem; color: var(--liquid-gold);
-        margin-bottom: 10px; text-shadow: 0 0 15px rgba(212, 175, 105, 0.4);
-        animation: pulseText 2s infinite alternate;
-      }
+      /* Clean Subtext on Bottom */
       .loader-text {
-        font-family: 'Montserrat', sans-serif; font-size: 0.8rem; letter-spacing: 3px;
-        text-transform: uppercase; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.6;
+        font-family: 'Montserrat', sans-serif; font-size: 0.85rem; letter-spacing: 3px;
+        text-transform: uppercase; color: rgba(255,255,255,0.7); text-align: center; line-height: 1.8;
       }
       @keyframes pulseText { 0% { opacity: 0.7; } 100% { opacity: 1; } }
 
@@ -131,8 +139,8 @@
 
   <body>
     <div id="custom-loader">
+        <div class="loader-cursive">Initializing<br>Workspace</div>
         <div class="loader-ring"></div>
-        <div class="loader-cursive">Initializing Workspace</div>
         <div class="loader-text">Downloading High-Fidelity 3D Assets<br>Please hold...</div>
     </div>
 
